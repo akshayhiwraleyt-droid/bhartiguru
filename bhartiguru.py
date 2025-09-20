@@ -745,7 +745,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Main function
 def main():
     # Create Application
-    application = Application.builder().token("YOUR_TELEGRAM_BOT_TOKEN").build()
+    application = Application.builder().token("7478787994:AAHqADDjAoHL8tO0JSv83o4a-J2L5VpKkKk").build()
     
     # Add conversation handler for the start command
     conv_handler = ConversationHandler(
