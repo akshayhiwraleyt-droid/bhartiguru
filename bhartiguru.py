@@ -797,11 +797,71 @@ def main():
     application.bot.set_webhook(url=WEBHOOK_URL)
     
     # Start Flask app
-    app = (__name__)
+from flask import Flask, request  # type: ignore # <-- Add this at the top if not present
+
+# ...existing code...
+
+def main():
+    TOKEN = "7478787994:AAHqADDjAoHL8tO0JSv83o4a-J2L5VpKkKk"
+    WEBHOOK_PATH = f"/{TOKEN}"
+    WEBHOOK_URL = f"https://bhartiguru.py.onrender.com{WEBHOOK_PATH}"  # Replace with your Render/Heroku URL
+
+    # Create Application
+    application = Application.builder().token(TOKEN).build()
+    
+    # Add conversation handler for the start command
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            0: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)]
+    )
+    
+    # Add handlers
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.Regex("^📝 परीक्षा सुरू करा$"), start_exam))
+    application.add_handler(MessageHandler(filters.Regex("^📘 विषय निवडा$"), 
+                                         lambda update, context: update.message.reply_text(
+                                             "विषय निवडा:", reply_markup=subject_keyboard())))
+    application.add_handler(MessageHandler(filters.Regex("^💡 दैनंदिन विचार$"), daily_thought))
+    application.add_handler(MessageHandler(filters.Regex("^📰 बातम्या$"), news_updates))
+    application.add_handler(MessageHandler(filters.Regex("^⏰ रिमाइंडर सेट करा$"), set_reminder))
+    application.add_handler(MessageHandler(filters.Regex("^🕒 वेळ आणि तारीख$"), show_time_date))
+    
+    # Add callback query handlers
+    application.add_handler(CallbackQueryHandler(select_subject, pattern="^subject_"))
+    application.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
+    application.add_handler(CallbackQueryHandler(handle_answer, pattern="^answer_"))
+    application.add_handler(CallbackQueryHandler(exit_exam, pattern="^exit_exam$"))
+    application.add_handler(CallbackQueryHandler(confirm_exit, pattern="^confirm_exit$"))
+    application.add_handler(CallbackQueryHandler(cancel_exit, pattern="^cancel_exit$"))
+    
+    # Add conversation handler for setting reminders
+    reminder_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex("^⏰ रिमाइंडर सेट करा$"), set_reminder)],
+        states={
+            SETTING_REMINDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reminder_input)]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)]
+    )
+    application.add_handler(reminder_handler)
+    
+    # Add error handler
+    application.add_error_handler(error_handler)
+    
+    # Set webhook
+    application.bot.set_webhook(url=WEBHOOK_URL)
+    
+    # Start Flask app
+    from flask import Flask, request # type: ignore
+
+    app = Flask(__name__)
 
     @app.route(WEBHOOK_PATH, methods=['POST'])
     def webhook():
-        update = Update.de_json.get_json(force=True), application.bot
+        update = Update.de_json(request.get_json(force=True), application.bot)
         application.update_queue.put_nowait(update)
         return "ok"
 
@@ -809,10 +869,8 @@ def main():
     def index():
         return "Bot is running!"
 
-    if __name__ == "__main__":
-        # Start Flask app
-        port = int(os.environ.get("PORT", 5000))
-        app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()
