@@ -6,6 +6,7 @@ import re
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Optional
 import random
+import os
 
 from telegram import (
     Update, 
@@ -25,7 +26,6 @@ from telegram.ext import (
     JobQueue
 )
 from telegram.constants import ParseMode
-
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -744,8 +744,12 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main function
 def main():
+    TOKEN = "7478787994:AAHqADDjAoHL8tO0JSv83o4a-J2L5VpKkKk"
+    WEBHOOK_PATH = f"/{TOKEN}"
+    WEBHOOK_URL = f"https://bhartiguru.py.onrender.com{WEBHOOK_PATH}"  # Replace with your Render/Heroku URL
+
     # Create Application
-    application = Application.builder().token("7478787994:AAHqADDjAoHL8tO0JSv83o4a-J2L5VpKkKk").build()
+    application = Application.builder().token(TOKEN).build()
     
     # Add conversation handler for the start command
     conv_handler = ConversationHandler(
@@ -789,8 +793,26 @@ def main():
     # Add error handler
     application.add_error_handler(error_handler)
     
-    # Start the Bot
-    application.run_polling()
+    # Set webhook
+    application.bot.set_webhook(url=WEBHOOK_URL)
+    
+    # Start Flask app
+    app = (__name__)
+
+    @app.route(WEBHOOK_PATH, methods=['POST'])
+    def webhook():
+        update = Update.de_json.get_json(force=True), application.bot
+        application.update_queue.put_nowait(update)
+        return "ok"
+
+    @app.route("/", methods=['GET'])
+    def index():
+        return "Bot is running!"
+
+    if __name__ == "__main__":
+        # Start Flask app
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()
